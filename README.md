@@ -13,7 +13,6 @@ This project is one of my first projects on GitHub and with Victron components a
 So for this one here I cook basicaly the code from my [Shelly 3EM Smartmeter into DBus integration](https://github.com/fabian-lauer/dbus-shelly-3em-smartmeter/).
 
 
-
 ## How it works
 ### My setup
 - Shelly 3EM with latest firmware (20220209-094824/v1.11.8-g8c7bb8d)
@@ -86,8 +85,10 @@ Within the project there is a file `/data/dbus-solax-x1-pvinverter/config.ini` -
 - https://github.com/victronenergy/venus/wiki/dbus#grid   DBus paths for Victron namespace
 - https://github.com/victronenergy/venus/wiki/dbus-api   DBus API from Victron
 - https://www.victronenergy.com/live/ccgx:root_access   How to get root access on GX device/Venus OS
-
+- https://github.com/victronenergy/dbus-fronius   looked up some details here for SunSpec emulation
+- https://www.victronenergy.com/live/ac_coupling:fronius   wanted to make it a fronius device - here are some details
+- https://github.com/victronenergy/venus/wiki/installing-additional-python-modules   If you need to add additional Python modules - here you go, but not needed for the project
 
 ## Discussions on the web
 This module/repository has been posted on the following threads:
-- TODO
+- https://community.victronenergy.com/questions/127456/solax-x1-boost-50-dt-inverter-with-venusos-cerbo-g.html
