@@ -1,0 +1,3 @@
+#!/bin/sh
+exec 2>&1
+python /data/dbus-solax-x1-pvinverter/dbus-solax-x1-pvinverter.py
