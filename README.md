@@ -80,6 +80,7 @@ Within the project there is a file `/data/dbus-solax-x1-pvinverter/config.ini` -
 | INVERTER  | Position | Refer to Victron documentation - 0=AC input 1; 1=AC output; 2=AC input 2 |
 | INVERTER  | MaxPower | Inverter max AC power in watts |
 | INVERTER  | GridVoltage | The voltage is not returned by RESTapi so we use this value to calculate the current based on power |
+| INVERTER  | Phase | Phase your inverter is connected to |
 
 
 ## Used documentation

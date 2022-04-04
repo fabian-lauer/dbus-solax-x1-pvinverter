@@ -50,7 +50,7 @@ class DbusSolaxX1Service:
     # add path values to dbus
     for path, settings in self._paths.items():
       self._dbusservice.add_path(
-        path, settings['initial'], gettextcallback=settings['textformat'], writeable=True, onchangecallback=self._handlechangedvalue)
+        self._replacePhaseVar(path), settings['initial'], gettextcallback=settings['textformat'], writeable=True, onchangecallback=self._handlechangedvalue)
  
     # last update
     self._lastUpdate = 0
@@ -97,6 +97,19 @@ class DbusSolaxX1Service:
     config.read("%s/config.ini" % (os.path.dirname(os.path.realpath(__file__))))
     return config;
  
+
+  def _getPhaseFromConfig(self):
+    result = "L1"
+    config = self._getConfig()
+    result = config['INVERTER']['Phase']
+    return result
+    
+  
+  def _replacePhaseVar(self, input):
+    result = input
+    result = result.replace("[*Phase*]", self._getPhaseFromConfig())
+    return result
+    
   
   def _getSolaxCloudUrl(self):
     config = self._getConfig()
@@ -218,20 +231,12 @@ class DbusSolaxX1Service:
        # set normal values       
        self._dbusservice['/Ac/Power'] = self._lastCloudACPower
        self._dbusservice['/StatusCode'] = self._getInverterStatus(self._lastCloudInverterStatus)  
-       self._dbusservice['/Ac/L1/Voltage'] = grid_voltage
-       # self._dbusservice['/Ac/L2/Voltage'] = 0 #not implemented - Solax X1 is 1 phase inverter
-       # self._dbusservice['/Ac/L3/Voltage'] = 0 #not implemented - Solax X1 is 1 phase inverter
-       self._dbusservice['/Ac/L1/Current'] = round(self._dbusservice['/Ac/Power'] / self._dbusservice['/Ac/L1/Voltage'] , 2)
-       # self._dbusservice['/Ac/L2/Current'] = 0 #not implemented - Solax X1 is 1 phase inverter
-       # self._dbusservice['/Ac/L3/Current'] = 0 #not implemented - Solax X1 is 1 phase inverter
-       self._dbusservice['/Ac/L1/Power'] = self._dbusservice['/Ac/Power']
-       # self._dbusservice['/Ac/L2/Power'] = 0 #not implemented - Solax X1 is 1 phase inverter
-       # self._dbusservice['/Ac/L3/Power'] = 0 #not implemented - Solax X1 is 1 phase inverter
-       self._dbusservice['/Ac/L1/Energy/Forward'] = self._lastCloudACEnergyTotal
-       #self._dbusservice['/Ac/L2/Energy/Forward'] = 0 #not implemented - Solax X1 is 1 phase inverter
-       #self._dbusservice['/Ac/L3/Energy/Forward'] = 0 #not implemented - Solax X1 is 1 phase inverter
-       self._dbusservice['/Ac/Energy/Forward'] = self._dbusservice['/Ac/L1/Energy/Forward']    # one phase pv-inverter #  + self._dbusservice['/Ac/L2/Energy/Forward'] + self._dbusservice['/Ac/L3/Energy/Forward']
-       self._dbusservice['/Ac/Current'] = self._dbusservice['/Ac/L1/Current'] # just copy value - 1phase inverter
+       self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Voltage')] = grid_voltage
+       self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Current')] = round(self._dbusservice['/Ac/Power'] / self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Voltage')] , 2)
+       self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Power')] = self._dbusservice['/Ac/Power']
+       self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Energy/Forward')] = self._lastCloudACEnergyTotal
+       self._dbusservice['/Ac/Energy/Forward'] = self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Energy/Forward')]    # one phase pv-inverter #  + self._dbusservice['/Ac/L2/Energy/Forward'] + self._dbusservice['/Ac/L3/Energy/Forward']
+       self._dbusservice['/Ac/Current'] = self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Current')] # just copy value - 1phase inverter
        self._dbusservice['/Ac/Voltage'] = grid_voltage
               
        
@@ -296,18 +301,10 @@ def main():
           '/Ac/Current': {'initial': 0, 'textformat': _a},
           '/Ac/Voltage': {'initial': 0, 'textformat': _v},
           
-          '/Ac/L1/Voltage': {'initial': 0, 'textformat': _v},
-          # one phase pv-inverter # '/Ac/L2/Voltage': {'initial': 0, 'textformat': _v},
-          # one phase pv-inverter # '/Ac/L3/Voltage': {'initial': 0, 'textformat': _v},
-          '/Ac/L1/Current': {'initial': 0, 'textformat': _a},
-          # one phase pv-inverter # '/Ac/L2/Current': {'initial': 0, 'textformat': _a},
-          # one phase pv-inverter # '/Ac/L3/Current': {'initial': 0, 'textformat': _a},
-          '/Ac/L1/Power': {'initial': 0, 'textformat': _w},
-          # one phase pv-inverter # '/Ac/L2/Power': {'initial': 0, 'textformat': _w},
-          # one phase pv-inverter # '/Ac/L3/Power': {'initial': 0, 'textformat': _w},
-          '/Ac/L1/Energy/Forward': {'initial': 0, 'textformat': _kwh},
-          # one phase pv-inverter # '/Ac/L2/Energy/Forward': {'initial': 0, 'textformat': _kwh},
-          # one phase pv-inverter # '/Ac/L3/Energy/Forward': {'initial': 0, 'textformat': _kwh},
+          '/Ac/[*Phase*]/Voltage': {'initial': 0, 'textformat': _v},
+          '/Ac/[*Phase*]/Current': {'initial': 0, 'textformat': _a},
+          '/Ac/[*Phase*]/Power': {'initial': 0, 'textformat': _w},
+          '/Ac/[*Phase*]/Energy/Forward': {'initial': 0, 'textformat': _kwh},          
         })
      
       logging.info('Connected to dbus, and switching over to gobject.MainLoop() (= event based)')
