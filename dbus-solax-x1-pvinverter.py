@@ -58,16 +58,15 @@ class DbusSolaxX1Service:
     self._dbusservice.add_path('/UpdateIndex', 0)
 
     # add path values to dbus
-    if (self._source == "modbus" and config['INVERTER.PHASES']):
-      for key in config['INVERTER.PHASES']:
-        phase = config['INVERTER.PHASES'][key]
-        for path, settings in self._paths.items():
+    for path, settings in self._paths.items():
+      if (settings['byPhase']):
+        for key in config['INVERTER.PHASES']:
+          phase = config['INVERTER.PHASES'][key]
           self._dbusservice.add_path(
             self._replacePhaseVar(path, phase), settings['initial'], gettextcallback=settings['textformat'], writeable=True, onchangecallback=self._handlechangedvalue)
-    else:
-      for path, settings in self._paths.items():
+      else:
         self._dbusservice.add_path(
-          self._replacePhaseVar(path), settings['initial'], gettextcallback=settings['textformat'], writeable=True, onchangecallback=self._handlechangedvalue)
+          path, settings['initial'], gettextcallback=settings['textformat'], writeable=True, onchangecallback=self._handlechangedvalue)
 
     # last update
     self._lastUpdate = 0
@@ -440,10 +439,10 @@ def main():
           '/Ac/Current': {'initial': 0, 'textformat': _a},
           '/Ac/Voltage': {'initial': 0, 'textformat': _v},
           
-          '/Ac/[*Phase*]/Voltage': {'initial': 0, 'textformat': _v},
-          '/Ac/[*Phase*]/Current': {'initial': 0, 'textformat': _a},
-          '/Ac/[*Phase*]/Power': {'initial': 0, 'textformat': _w},
-          '/Ac/[*Phase*]/Energy/Forward': {'initial': 0, 'textformat': _kwh},          
+          '/Ac/[*Phase*]/Voltage': {'initial': 0, 'textformat': _v, 'byPhase': True},
+          '/Ac/[*Phase*]/Current': {'initial': 0, 'textformat': _a, 'byPhase': True},
+          '/Ac/[*Phase*]/Power': {'initial': 0, 'textformat': _w, 'byPhase': True},
+          '/Ac/[*Phase*]/Energy/Forward': {'initial': 0, 'textformat': _kwh, 'byPhase': True},          
         })
      
       logging.info('Connected to dbus, and switching over to gobject.MainLoop() (= event based)')
