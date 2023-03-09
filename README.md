@@ -1,5 +1,5 @@
-# dbus-solax-x1-pvinverter
-Get production values from Solax Cloud for X1 inverter and feed them into [Victron Energies Venus OS](https://github.com/victronenergy/venus) DBus to make same available on CCGX and VRM portal
+# dbus-solax-x-pvinverter
+Get production values from Solax Modbus or Solax Cloud for X1/X3 inverters and feed them into [Victron Energies Venus OS](https://github.com/victronenergy/venus) DBus to make same available on CCGX and VRM portal
 
 
 ## Purpose
@@ -14,7 +14,7 @@ So for this one here I cook basicaly the code from my [Shelly 3EM Smartmeter int
 
 
 ## How it works
-### My setup
+### Possible setup
 - Shelly 3EM with latest firmware (20220209-094824/v1.11.8-g8c7bb8d)
   - 3-Phase installation (normal for Germany)
   - Connected to Wifi netowrk "A"
@@ -57,6 +57,7 @@ After that call the install.sh script.
 
 The following script should do everything for you:
 ```
+pip install solax-x3-rs485
 wget https://github.com/fabian-lauer/dbus-solax-x1-pvinverter/archive/refs/heads/main.zip
 unzip main.zip "dbus-solax-x1-pvinverter-main/*" -d /data
 mv /data/dbus-solax-x1-pvinverter-main /data/dbus-solax-x1-pvinverter
