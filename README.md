@@ -76,7 +76,7 @@ To use with only one phase (X1 devices) just remove Phase2 and Phase3 from the I
 
 | Section  | Config vlaue | Explanation |
 | ------------- | ------------- | ------------- |
-| DEFAULT  | SignOfLifeLog  | Time in minutes how often a status is added to the log-file `current.log` with log-level INFO |
+| APP  | SignOfLifeLog  | Time in minutes how often a status is added to the log-file `current.log` with log-level INFO |
 | MODBUS | port | The port of the modbus adapter to use ie. /dev/ttyUSB0 |
 | MODBUS | unit | The modbus unit id, if multiple units share the same modbus, default = 1 |
 | SOLAXCLOUD  | Endpoint | API endpoint - should always be the same |
