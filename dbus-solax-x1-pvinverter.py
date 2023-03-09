@@ -6,7 +6,7 @@ import logging
 import sys
 import os
 import sys
-if sys.version_info.major > 2:
+if sys.version_info.major == 2:
     import gobject
 else:
     from gi.repository import GLib as gobject
@@ -30,7 +30,8 @@ class DbusSolaxX1Service:
     if (config['MODBUS']):
       self._source = "modbus"
       self._modbus = solaxx3rs485.SolaxX3RS485Client(config['MODBUS']['port'])
-    
+      logging.debug("ModBus connected to %s" % (config['MODBUS']['port']))
+
     # victron service
     self._dbusservice = VeDbusService("{}.pv_{}".format(servicename, self._getSolaxInverterSerial()))
     self._paths = paths
@@ -74,23 +75,24 @@ class DbusSolaxX1Service:
     self._lastCloudCheck = 0
     self._lastCloudACPower = 0
     self._lastCloudInverterStatus = 0
-    self._lastPhase1Power = 0
-    self._lastPhase2Power = 0
-    self._lastPhase3Power = 0
-    self._lastPhase1Voltage = 0
-    self._lastPhase2Voltage = 0
-    self._lastPhase3Voltage = 0
-    self._lastPhase1Current = 0
-    self._lastPhase2Current = 0
-    self._lastPhase3Current = 0
- 
+    self._lastValues = {
+      "phase1Power": 0,
+      "phase2Power": 0,
+      "phase3Power": 0,
+      "phase1Voltage": 0,
+      "phase2Voltage": 0,
+      "phase3Voltage": 0,
+      "phase1Current": 0,
+      "phase2Current": 0,
+      "phase3Current": 0,
+    };
+
     # add _update function 'timer'
-    gobject.timeout_add(500, self._update) # call update routine
+    gobject.timeout_add(5000, self._update) # call update routine
  
     # add _signOfLife 'timer' to get feedback in log every 5minutes
     gobject.timeout_add(self._getSignOfLifeInterval()*60*1000, self._signOfLife)
 
- 
   def _getInverterPosition(self):
     config = self._getConfig()
     #Debug infos: 0=AC input 1; 1=AC output; 2=AC input 2
@@ -99,7 +101,7 @@ class DbusSolaxX1Service:
 
   def _getSignOfLifeInterval(self):
     config = self._getConfig()
-    value = config['DEFAULT']['SignOfLifeLog']
+    value = config['APP']['SignOfLifeLog']
     
     if not value: 
         value = 0
@@ -272,6 +274,7 @@ class DbusSolaxX1Service:
     logging.info("--- Start: sign of life ---")
     logging.info("Last _update() call: %s" % (self._lastUpdate))
     logging.info("Last _updateCloud() call: %s" % (self._lastCloudUpdate))
+    logging.info("Last _modbusUpdate() call: %s" % (self._lastModbusUpdate))
     logging.info("Last '/Ac/Power' (Cloud): %s" % (self._lastCloudACPower))
     logging.info("Last '/Ac/Power': %s" % (self._dbusservice['/Ac/Power']))
     logging.info("--- End: sign of life ---")
@@ -282,6 +285,7 @@ class DbusSolaxX1Service:
     return lastValue*((1+((time.time() - lastUpdate)*lastValueChangePercSecond)))  
  
   def _update(self):
+    config = self._getConfig()
     try:  
        # logging
        logging.debug("---");
@@ -290,7 +294,7 @@ class DbusSolaxX1Service:
        grid_voltage = self._getGridVoltage()
            
        #get data from solax cloud
-       if self._modus == "cloud" and (self._lastCloudCheck == 0 or (time.time()-self._lastCloudCheck) >= 15):
+       if self._source == "cloud" and (self._lastCloudCheck == 0 or (time.time()-self._lastCloudCheck) >= 15):
           #get data from Solax Cloud
           meter_data = self._getSolaxCloudData()
           self._lastCloudCheck = time.time()
@@ -307,26 +311,20 @@ class DbusSolaxX1Service:
           logging.debug("Cloud Update - AC power: %s" % (self._lastCloudACPower))
           logging.debug("Cloud Update - AC energy total: %s" % (self._lastCloudACEnergyTotal))
        #get data from modbus
-       if self._modus == "modbus":
+       if self._source == "modbus":
          #we can query this in every loop, not just every 5minutes :)
          meter_data = self._modbus.get_data()
          self._lastModbusCheck = time.time()
          
          self._lastModbusUpdate = time.time()
          # power
-         self.lastPhase1Power = meter_data.output_power_phase_1
-         self.lastPhase2Power = meter_data.output_power_phase_2
-         self.lastPhase3Power = meter_data.output_power_phase_3
-         
-         # currents
-         self.lastPhase1Current = meter_data.output_current_phase_1
-         self.lastPhase2Current = meter_data.output_current_phase_2
-         self.lastPhase3Current = meter_data.output_current_phase_3
-         
-         # voltage data
-         self.lastPhase1Voltage = meter_data.grid_voltage_phase_1
-         self.lastPhase2Voltage = meter_data.grid_voltage_phase_2
-         self.lastPhase3Voltage = meter_data.grid_voltage_phase_3
+         i = 1
+         for key in config['INVERTER.PHASES']:
+           phase = config['INVERTER.PHASES'][key]
+           self._lastValues[key+'Power'] = getattr(meter_data, 'output_power_phase_'+str(i))
+           self._lastValues[key+'Current'] = getattr(meter_data, 'output_current_phase_'+str(i))
+           self._lastValues[key+'Voltage'] = getattr(meter_data, 'grid_voltage_phase_'+str(i))
+           i += 1
          
          # yield data
          self.lastTotalYield = meter_data.total_yield
@@ -353,12 +351,11 @@ class DbusSolaxX1Service:
        total_energy_forward = 0
        total_power = 0
        if (self._source == "modbus" and config['INVERTER.PHASES']):
-         total_energy_forward = self._lastCloudACEnergyTotal
          for key in config['INVERTER.PHASES']:
            phase = config['INVERTER.PHASES'][key]
-           phase_power = self['_last'+key+'Power']
-           phase_voltage = self['_last'+key+'Voltage']
-           phase_current = self['_last'+key+'Current']
+           phase_power = self._lastValues[key+'Power']
+           phase_voltage = self._lastValues[key+'Voltage']
+           phase_current = self._lastValues[key+'Current']
            total_power = total_power + phase_power
            total_curren = total_current + phase_current
            self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Voltage', phase)] = phase_voltage
@@ -390,10 +387,10 @@ class DbusSolaxX1Service:
        # logging
        logging.debug("Inverter power: %s" % (self._dbusservice['/Ac/Power']))
        logging.debug("---");
-       
+       logging.info("Update successful, Power: %s" % self._dbusservice['/Ac/Power'])
        
     except Exception as e:
-       logging.critical('Error at %s', '_update', exc_info=e)
+       logging.debug('Error at %s', '_update', exc_info=e)
 
     # return true, otherwise add_timeout will be removed from GObject - see docs http://library.isr.ist.utl.pt/docs/pygtk2reference/gobject-functions.html#function-gobject--timeout-add
     return True
@@ -409,7 +406,7 @@ def main():
   #configure logging
   logging.basicConfig(      format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S',
-                            level=logging.INFO,
+                            level=logging.INFO,#DEBUG,
                             handlers=[
                                 logging.FileHandler("%s/current.log" % (os.path.dirname(os.path.realpath(__file__)))),
                                 logging.StreamHandler()
