@@ -11,6 +11,7 @@ TokenId=12345678901234567890
 RegNo=COOLREGNO
 
 [INVERTER]
+Name=Solax X1
 Position=0
 MaxPower=5000
 GridVoltage=230

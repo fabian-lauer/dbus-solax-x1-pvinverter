@@ -437,6 +437,8 @@ def main():
       # Have a mainloop, so we can send/receive asynchronous calls to and from dbus
       DBusGMainLoop(set_as_default=True)
      
+      config = configparser.ConfigParser()
+      config.read("%s/config.ini" % (os.path.dirname(os.path.realpath(__file__))))
       #formatting 
       _int = lambda p, v: (str(v))
       _kwh = lambda p, v: (str(round(v, 2)) + ' KWh')
@@ -446,6 +448,7 @@ def main():
      
       #start our main-service
       pvac_output = DbusSolaxX1Service(
+        productname=config['INVERTER']['NAME'] or "Solax X1",
         servicename='com.victronenergy.pvinverter',
         #servicename='com.victronenergy.inverter',
         deviceinstance=23, #pvinverters from 20-29
