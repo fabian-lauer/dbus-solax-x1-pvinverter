@@ -89,7 +89,7 @@ class DbusSolaxX1Service:
     };
 
     # add _update function 'timer'
-    gobject.timeout_add(5000, self._update) # call update routine
+    gobject.timeout_add(1000, self._update) # call update routine
  
     # add _signOfLife 'timer' to get feedback in log every 5minutes
     gobject.timeout_add(self._getSignOfLifeInterval()*60*1000, self._signOfLife)
@@ -407,8 +407,10 @@ class DbusSolaxX1Service:
        logging.debug("---");
        logging.info("Update successful, Power: %s" % self._dbusservice['/Ac/Power'])
        
+    except solaxx3rs485.SolaxX3RS485Exception:
+      logging.info("_update failed, modbus not ready yet")
     except Exception as e:
-       logging.critical('Error at %s', '_update', exc_info=e)
+      logging.critical('Error at %s', '_update', exc_info=e)
 
     # return true, otherwise add_timeout will be removed from GObject - see docs http://library.isr.ist.utl.pt/docs/pygtk2reference/gobject-functions.html#function-gobject--timeout-add
     return True
