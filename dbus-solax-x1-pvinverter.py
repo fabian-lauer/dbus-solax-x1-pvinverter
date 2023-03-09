@@ -59,7 +59,7 @@ class DbusSolaxX1Service:
 
     # add path values to dbus
     for path, settings in self._paths.items():
-      if (settings['byPhase']):
+      if ('byPhase' in settings and settings['byPhase'] == True):
         for key in config['INVERTER.PHASES']:
           phase = config['INVERTER.PHASES'][key]
           self._dbusservice.add_path(
