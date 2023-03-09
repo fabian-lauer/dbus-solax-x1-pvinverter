@@ -30,7 +30,7 @@ class DbusSolaxX1Service:
     if (config['MODBUS']):
       self._source = "modbus"
       self._modbus = solaxx3rs485.SolaxX3RS485Client(config['MODBUS']['port'])
-      logging.debug("ModBus connected to %s" % (config['MODBUS']['port']))
+      logging.info("ModBus connected to %s" % (config['MODBUS']['port']))
 
     # victron service
     self._dbusservice = VeDbusService("{}.pv_{}".format(servicename, self._getSolaxInverterSerial()))
@@ -75,6 +75,7 @@ class DbusSolaxX1Service:
     self._lastCloudCheck = 0
     self._lastCloudACPower = 0
     self._lastCloudInverterStatus = 0
+    self._numberOfTrackers = 1
     self._lastValues = {
       "phase1Power": 0,
       "phase2Power": 0,
@@ -285,6 +286,7 @@ class DbusSolaxX1Service:
     return lastValue*((1+((time.time() - lastUpdate)*lastValueChangePercSecond)))  
  
   def _update(self):
+    logging.info("Running _uppdate")
     config = self._getConfig()
     try:  
        # logging
@@ -331,13 +333,23 @@ class DbusSolaxX1Service:
          self.lastTodayYield = meter_data.yield_today
          
          # data of each pv string
-         self.lastPv1Power = meter_data.pv1_dc_power
-         self.lastPv1Current = meter_data.pv1_input_current
-         self.lastPv1Voltage = meter_data.pv1_input_voltage
-         self.lastPv2Power = meter_data.pv2_dc_power
-         self.lastPv2Current = meter_data.pv2_input_current
-         self.lastPv2Voltage = meter_data.pv2_input_voltage
-         
+         tracker = 1
+         while True:
+           self._lastValues['pv'+str(tracker)+'Power'] = getattr(meter_data, 'pv'+str(tracker)+'_dc_power')
+           self._lastValues['pv'+str(tracker)+'Current'] = getattr(meter_data, 'pv'+str(tracker)+'_input_current')
+           self._lastValues['pv'+str(tracker)+'Voltage'] = getattr(meter_data, 'pv'+str(tracker)+'_input_voltage')
+           if (getattr(meter_data, 'pv'+str(tracker+1)+'_dc_power', None) is None):
+             break
+           tracker += 1
+         if (tracker != self._numberOfTrackers):
+           self._numberOfTrackers = tracker
+           self._dbusservice['/NrOfTrackers'] = tracker
+           for tracker in range(self._numberOfTrackers):
+             try:
+               self._dbusservice.add_path('/Pv/'+str(tracker)+'/V', 0)
+               self._dbusservice.add_path('/Pv/'+str(tracker)+'/P', 0)
+             except:
+               logging.debug('error adding endpoints')
          self.lastStatus = self._getInverterStatusRunMode(meter_data.run_mode)
 
        # set status       
@@ -351,6 +363,12 @@ class DbusSolaxX1Service:
        total_energy_forward = 0
        total_power = 0
        if (self._source == "modbus" and config['INVERTER.PHASES']):
+         total_pv_power = 0
+         for tracker in range(self._numberOfTrackers):
+           total_pv_power += self._lastValues['pv'+str(tracker+1)+'Power']
+           self._dbusservice['/Pv/'+str(tracker)+'/V'] = self._lastValues['pv'+str(tracker+1)+'Voltage']
+           self._dbusservice['/Pv/'+str(tracker)+'/P'] = self._lastValues['pv'+str(tracker+1)+'Power']
+         self._dbusservice['/Yield/Power'] = total_pv_power
          for key in config['INVERTER.PHASES']:
            phase = config['INVERTER.PHASES'][key]
            phase_power = self._lastValues[key+'Power']
@@ -390,7 +408,7 @@ class DbusSolaxX1Service:
        logging.info("Update successful, Power: %s" % self._dbusservice['/Ac/Power'])
        
     except Exception as e:
-       logging.debug('Error at %s', '_update', exc_info=e)
+       logging.critical('Error at %s', '_update', exc_info=e)
 
     # return true, otherwise add_timeout will be removed from GObject - see docs http://library.isr.ist.utl.pt/docs/pygtk2reference/gobject-functions.html#function-gobject--timeout-add
     return True
@@ -420,6 +438,7 @@ def main():
       DBusGMainLoop(set_as_default=True)
      
       #formatting 
+      _int = lambda p, v: (str(v))
       _kwh = lambda p, v: (str(round(v, 2)) + ' KWh')
       _a = lambda p, v: (str(round(v, 1)) + ' A')
       _w = lambda p, v: (str(round(v, 1)) + ' W')
@@ -428,6 +447,7 @@ def main():
       #start our main-service
       pvac_output = DbusSolaxX1Service(
         servicename='com.victronenergy.pvinverter',
+        #servicename='com.victronenergy.inverter',
         deviceinstance=23, #pvinverters from 20-29
         paths={
           '/Ac/Energy/Forward': {'initial': 0, 'textformat': _kwh},     
@@ -440,6 +460,11 @@ def main():
           '/Ac/[*Phase*]/Current': {'initial': 0, 'textformat': _a, 'byPhase': True},
           '/Ac/[*Phase*]/Power': {'initial': 0, 'textformat': _w, 'byPhase': True},
           '/Ac/[*Phase*]/Energy/Forward': {'initial': 0, 'textformat': _kwh, 'byPhase': True},          
+
+          '/NrOfTrackers': {'initial': 1, 'textformat': _int},
+          '/Yield/Power': {'initial': 0, 'textformat': _w},
+          '/Pv/0/V': {'initial': 0, 'textformat': _v},
+          '/Pv/0/P': {'initial': 0, 'textformat': _w},
         })
      
       logging.info('Connected to dbus, and switching over to gobject.MainLoop() (= event based)')
