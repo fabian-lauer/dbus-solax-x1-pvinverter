@@ -23,6 +23,8 @@ import solaxx3rs485
 
 class DbusSolaxX1Service:
   def __init__(self, servicename, deviceinstance, paths, productname='Solax X1', connection='192.168.2.111- 126 (sunspec)'):
+    config = self._getConfig()    
+
     # detect modus
     self._source = "cloud"
     if (config['MODBUS']):
@@ -134,7 +136,7 @@ class DbusSolaxX1Service:
     return result
     
   
-  def _replacePhaseVar(self, input, phase=self._getPhaseFromConfig()):
+  def _replacePhaseVar(self, input, phase='L1'):
     result = input
     result = result.replace("[*Phase*]", phase)
     return result
