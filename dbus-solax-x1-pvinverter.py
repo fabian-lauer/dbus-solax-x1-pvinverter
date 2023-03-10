@@ -378,10 +378,11 @@ class DbusSolaxX1Service:
            phase_voltage = self._lastValues[key+'Voltage']
            phase_current = self._lastValues[key+'Current']
            total_power = total_power + phase_power
-           total_curren = total_current + phase_current
+           total_current = total_current + phase_current
            self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Voltage', phase)] = phase_voltage
            self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Current', phase)] = phase_current
            self._dbusservice[self._replacePhaseVar('/Ac/[*Phase*]/Power', phase)] = phase_power
+         total_energy_forward = self.lastTotalYield
        else:
          total_power = self._lastCloudACPower
          total_energy_forward = self._lastCloudACEnergyTotal
