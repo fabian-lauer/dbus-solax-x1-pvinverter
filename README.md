@@ -1,5 +1,5 @@
-# dbus-solax-x1-pvinverter
-Get production values from Solax Cloud for X1 inverter and feed them into [Victron Energies Venus OS](https://github.com/victronenergy/venus) DBus to make same available on CCGX and VRM portal
+# dbus-solax-x-pvinverter
+Get production values from Solax Modbus or Solax Cloud for X1/X3 inverters and feed them into [Victron Energies Venus OS](https://github.com/victronenergy/venus) DBus to make same available on CCGX and VRM portal
 
 
 ## Purpose
@@ -14,7 +14,7 @@ So for this one here I cook basicaly the code from my [Shelly 3EM Smartmeter int
 
 
 ## How it works
-### My setup
+### Possible setup
 - Shelly 3EM with latest firmware (20220209-094824/v1.11.8-g8c7bb8d)
   - 3-Phase installation (normal for Germany)
   - Connected to Wifi netowrk "A"
@@ -57,6 +57,7 @@ After that call the install.sh script.
 
 The following script should do everything for you:
 ```
+pip install solax-x3-rs485
 wget https://github.com/fabian-lauer/dbus-solax-x1-pvinverter/archive/refs/heads/main.zip
 unzip main.zip "dbus-solax-x1-pvinverter-main/*" -d /data
 mv /data/dbus-solax-x1-pvinverter-main /data/dbus-solax-x1-pvinverter
@@ -70,9 +71,15 @@ rm main.zip
 ### Change config.ini
 Within the project there is a file `/data/dbus-solax-x1-pvinverter/config.ini` - just change the values
 
+If you add MODBUS to your config the SOLAXCLOUD settings will be ignored.
+
+To use with only one phase (X1 devices) just remove Phase2 and Phase3 from the INVERTER.PHASES section.
+
 | Section  | Config vlaue | Explanation |
 | ------------- | ------------- | ------------- |
-| DEFAULT  | SignOfLifeLog  | Time in minutes how often a status is added to the log-file `current.log` with log-level INFO |
+| APP  | SignOfLifeLog  | Time in minutes how often a status is added to the log-file `current.log` with log-level INFO |
+| MODBUS | port | The port of the modbus adapter to use ie. /dev/ttyUSB0 |
+| MODBUS | unit | The modbus unit id, if multiple units share the same modbus, default = 1 |
 | SOLAXCLOUD  | Endpoint | API endpoint - should always be the same |
 | SOLAXCLOUD  | TokenId | TokenId from Solax Cloud portal |
 | SOLAXCLOUD  | RegNo | RegNo of inverter WifiStick |
@@ -80,7 +87,9 @@ Within the project there is a file `/data/dbus-solax-x1-pvinverter/config.ini` -
 | INVERTER  | MaxPower | Inverter max AC power in watts |
 | INVERTER  | GridVoltage | The voltage is not returned by RESTapi so we use this value to calculate the current based on power |
 | INVERTER  | Phase | Phase your inverter is connected to |
-
+| INVERTER.PHASES | Phase1 | Name of Phase 1, ie. L1 |
+| INVERTER.PHASES | Phase2 | Name of Phase 2, ie. L2 |
+| INVERTER.PHASES | Phase3 | Name of Phase 3, ie. L3 |
 
 ## Used documentation
 - https://github.com/victronenergy/venus/wiki/dbus#grid   DBus paths for Victron namespace

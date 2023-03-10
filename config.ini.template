@@ -1,5 +1,9 @@
-[DEFAULT]
+[APP]
 SignOfLifeLog=5
+
+[MODBUS]
+#unit=1
+port=/dev/ttyUSB1
 
 [SOLAXCLOUD]
 Endpoint=https://www.eu.solaxcloud.com:9443/proxy/api/getRealtimeInfo.do
@@ -7,7 +11,14 @@ TokenId=12345678901234567890
 RegNo=COOLREGNO
 
 [INVERTER]
+Name=Solax X1
 Position=0
 MaxPower=5000
 GridVoltage=230
 Phase=L1
+SN=INVERTERSERIAL
+
+[INVERTER.PHASES]
+Phase1=L1
+Phase2=L2
+Phase3=L3
